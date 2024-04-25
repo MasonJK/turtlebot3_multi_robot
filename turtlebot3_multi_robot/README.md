@@ -2,17 +2,10 @@
 The ROS2 project  scalable solution for launching multiple TurtleBot3 robots with navigation capabilities using the Navigation2 (Nav2) stack. By leveraging namespaces in ROS2, this project enables the seamless deployment of multiple TurtleBot3 robots in a simple and organized manner. Each robot instance can be differentiated by its unique namespace, ensuring independence and preventing naming conflicts.
 
 
-The 'master' branch includes an implementation that functions with the humble framework, while the 'foxy' branch provides support specifically for ROS2 Foxy.
-
-'master' -> ROS2 Humble
-
-'foxy' -> ROS2 Foxy
-
-The code in the "foxy" branch is compatible with ROS2 humble. In the master branch, there is an updated launch file for bringing up nav2 with composite nodes. However, the creation of composite nodes is currently disabled due to an issue in the ROS2 humble implementation. This issue pertains to the propagation of namespace mapping to nodes (in composite container) with sub-namespaces, such as "/global_costmap/global_costmap".
+'main' -> ROS2 Humble
 
 ## Run without nav2 stack
-**Guide**: https://medium.com/@arshad.mehmood/efficient-deployment-and-operation-of-multiple-turtlebot3-robots-in-gazebos-f72f6a364620
-```
+
 ros2 launch turtlebot3_multi_robot gazebo_multi_world.launch.py enable_drive:=True
 ```
 # turtlebot3_multi_robot
@@ -33,8 +26,8 @@ Names and poses for the robots in nav2 example
  robots = [
  {'name': 'tb1', 'x_pose': '-1.5', 'y_pose': '-0.5', 'z_pose': 0.01},
  {'name': 'tb2', 'x_pose': '-1.5', 'y_pose': '0.5', 'z_pose': 0.01},
- {'name': 'tb3', 'x_pose': '1.5', 'y_pose': '-0.5', 'z_pose': 0.01},
- {'name': 'tb4', 'x_pose': '1.5', 'y_pose': '0.5', 'z_pose': 0.01},
+# {'name': 'tb3', 'x_pose': '1.5', 'y_pose': '-0.5', 'z_pose': 0.01},
+# {'name': 'tb4', 'x_pose': '1.5', 'y_pose': '0.5', 'z_pose': 0.01},
  # …
  # …
  ]
