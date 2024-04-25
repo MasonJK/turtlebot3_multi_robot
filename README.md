@@ -10,7 +10,6 @@ ros2 launch turtlebot3_multi_robot gazebo_multi_world.launch.py enable_drive:=Tr
 
 ## Run with nav2 stack
 ros2 launch turtlebot3_multi_robot gazebo_multi_nav2_world.launch.py  use_sim_time:=True
-
 ```
 
 ```
