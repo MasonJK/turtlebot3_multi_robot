@@ -32,14 +32,15 @@ def generate_launch_description():
 
     # Names and poses of the robots
     robots = [
-        {'name': 'tb1', 'x_pose': '-1.5', 'y_pose': '-0.5', 'z_pose': 0.01},
-        {'name': 'tb2', 'x_pose': '-1.5', 'y_pose': '0.5', 'z_pose': 0.01},
+        {'name': 'wm_robot1', 'x_pose': '-1.5', 'y_pose': '-0.5', 'z_pose': 0.01},
+        {'name': 'wm_robot2', 'x_pose': '1.5', 'y_pose': '0.5', 'z_pose': 0.01},
         # {'name': 'tb3', 'x_pose': '1.5', 'y_pose': '-0.5', 'z_pose': 0.01},
         # {'name': 'tb4', 'x_pose': '1.5', 'y_pose': '0.5', 'z_pose': 0.01},
         # ...
         # ...
         ]
-
+    wm_backend_services_dir = get_package_share_directory("wm_backend_services")
+    aws_ros2_bridge_dir = get_package_share_directory("aws_ros2_bridge")
     TURTLEBOT3_MODEL = 'waffle'
 
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
@@ -57,7 +58,7 @@ def generate_launch_description():
         name='enable_rviz', default_value=enable_rviz, description='Enable rviz launch'
     )
 
-    
+
     turtlebot3_multi_robot = get_package_share_directory('turtlebot3_multi_robot')
 
     package_dir = get_package_share_directory('turtlebot3_multi_robot')
@@ -78,6 +79,11 @@ def generate_launch_description():
         get_package_share_directory('turtlebot3_multi_robot'),
         'worlds', 'multi_robot_world.world')
 
+    aws_ros2_bridge_cmd = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(aws_ros2_bridge_dir, 'launch', 'bridge_launcher.launch.py'))
+    )
+
     gzserver_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory('gazebo_ros'), 'launch', 'gzserver.launch.py')
@@ -96,16 +102,17 @@ def generate_launch_description():
         'nav_params_file',
         default_value=os.path.join(package_dir, 'params', 'nav2_params.yaml'),
         description='Full path to the ROS2 parameters file to use for all launched nodes')
-    
-     
+
+
     ld.add_action(declare_use_sim_time)
     ld.add_action(declare_enable_drive)
     ld.add_action(declare_enable_rviz)
     ld.add_action(declare_rviz_config_file_cmd)
     ld.add_action(declare_params_file_cmd)
+    ld.add_action(aws_ros2_bridge_cmd)
     ld.add_action(gzserver_cmd)
     ld.add_action(gzclient_cmd)
- 
+
     remappings = [('/tf', 'tf'),
                   ('/tf_static', 'tf_static')]
     map_server=Node(package='nav2_map_server',
@@ -130,7 +137,7 @@ def generate_launch_description():
 
     ######################
 
-    # Remapping is required for state publisher otherwise /tf and /tf_static 
+    # Remapping is required for state publisher otherwise /tf and /tf_static
     # will get be published on root '/' namespace
     remappings = [('/tf', 'tf'), ('/tf_static', 'tf_static')]
 
@@ -170,7 +177,7 @@ def generate_launch_description():
         bringup_cmd = IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     os.path.join(nav_launch_dir, 'bringup_launch.py')),
-                    launch_arguments={  
+                    launch_arguments={
                                     'slam': 'False',
                                     'namespace': namespace,
                                     'use_namespace': 'True',
@@ -211,8 +218,15 @@ def generate_launch_description():
     ######################
     # Start rviz nodes and drive nodes after the last robot is spawned
     for robot in robots:
-
         namespace = [ '/' + robot['name'] ]
+
+        rmf_publisher = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(wm_backend_services_dir, 'launch', 'rmf_publisher.launch.py')),
+                launch_arguments={
+                                'namespace': namespace,
+                                'device_numver': robot}.items()
+        )
 
         # Create a initial pose topic publish call
         message = '{header: {frame_id: map}, pose: {pose: {position: {x: ' + \
@@ -228,12 +242,12 @@ def generate_launch_description():
         rviz_cmd = IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(nav_launch_dir, 'rviz_launch.py')),
-                launch_arguments={'use_sim_time': use_sim_time, 
+                launch_arguments={'use_sim_time': use_sim_time,
                                   'namespace': namespace,
                                   'use_namespace': 'True',
                                   'rviz_config': rviz_config_file, 'log_level': 'warn'}.items(),
                                    condition=IfCondition(enable_rviz)
-                                    )
+        )
 
         drive_turtlebot3_burger = Node(
             package='turtlebot3_gazebo', executable='turtlebot3_drive',
@@ -241,7 +255,7 @@ def generate_launch_description():
             condition=IfCondition(enable_drive),
         )
 
-        # Use RegisterEventHandler to ensure next robot rviz launch happens 
+        # Use RegisterEventHandler to ensure next robot rviz launch happens
         # only after all robots are spawned
         post_spawn_event = RegisterEventHandler(
             event_handler=OnProcessExit(
@@ -252,7 +266,7 @@ def generate_launch_description():
 
         # Perform next rviz and other node instantiation after the previous intialpose request done
         last_action = initial_pose_cmd
-
+        ld.add_action(rmf_publisher)
         ld.add_action(post_spawn_event)
         ld.add_action(declare_params_file_cmd)
     ######################
